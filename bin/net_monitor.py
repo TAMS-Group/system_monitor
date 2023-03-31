@@ -56,7 +56,7 @@ import socket
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 
 net_level_warn = 0.95
-net_capacity = 128
+net_ifaces_capacity = {'eth0': 128.0}
 
 stat_dict = {0: 'OK', 1: 'Warning', 2: 'Error'}
 
@@ -108,7 +108,7 @@ class NetMonitor():
     self._diag_pub = rospy.Publisher('/diagnostics', DiagnosticArray, queue_size = 100)
     self._mutex = threading.Lock()
     self._net_level_warn = rospy.get_param('~net_level_warn', net_level_warn)
-    self._net_capacity = rospy.get_param('~net_capacity', net_capacity)
+    self._net_ifaces_capacity = rospy.get_param('~ifaces_capacity', net_ifaces_capacity)
     self._usage_timer = None
     self._usage_stat = DiagnosticStatus()
     self._usage_stat.name = 'Network Usage (%s)' % diag_hostname
@@ -156,6 +156,8 @@ class NetMonitor():
         kb_out.append(data[i + 1])
       level = DiagnosticStatus.OK
       for i in range(0, len(ifaces)):
+        if not ifaces[i] in self._net_ifaces_capacity:
+          continue
         values.append(KeyValue(key = 'Interface Name',
           value = ifaces[i]))
         (retcode, cmd_out) = get_sys_net(ifaces[i], 'operstate')
@@ -168,8 +170,8 @@ class NetMonitor():
           value = str(float(kb_in[i]) / 1024) + " (MB/s)"))
         values.append(KeyValue(key = 'Output Traffic',
           value = str(float(kb_out[i]) / 1024) + " (MB/s)"))
-        net_usage_in = float(kb_in[i]) / 1024 / self._net_capacity
-        net_usage_out = float(kb_out[i]) / 1024 / self._net_capacity
+        net_usage_in = float(kb_in[i]) / 1024 / self._net_ifaces_capacity[ifaces[i]]
+        net_usage_out = float(kb_out[i]) / 1024 / self._net_ifaces_capacity[ifaces[i]]
         if net_usage_in > self._net_level_warn or\
           net_usage_out > self._net_level_warn:
           level = DiagnosticStatus.WARN
