@@ -196,7 +196,9 @@ class NetMonitor():
         if retcode == 0:
           values.append(KeyValue(key = 'Tx Errors', value = cmd_out))
     except Exception as e:
-      rospy.logerr(traceback.format_exc())
+      # avoid error log on shutdown
+      if not rospy.is_shutdown():
+        rospy.logerr(traceback.format_exc())
       msg = 'Network Usage Check Error'
       values.append(KeyValue(key = msg, value = str(e)))
       level = DiagnosticStatus.ERROR
